@@ -3627,41 +3627,51 @@ static struct i2c_board_info acc_i2c_devices[] = {
 #endif
 
 #ifdef CONFIG_SENSORS_AK8975
-static struct akm8975_platform_data akm8975_pdata = {
-		.gpio_data_ready_int = MSM_GPIO_MSENSE_RST, //PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(33)),
-};
-
-static struct i2c_gpio_platform_data mag_i2c_gpio_data = {
-	.sda_pin    = 88,
-	.scl_pin    = 86,
-};
-static struct platform_device mag_i2c_gpio_device = {
-	.name       = "i2c-gpio",
-	.id         = 12,
-	.dev        = {
-		.platform_data  = &mag_i2c_gpio_data,
-	},
-};
-
-static struct i2c_board_info mag_i2c_devices[] = {
-	{
-		I2C_BOARD_INFO("ak8975", 0x0C),
-		.platform_data = &akm8975_pdata,
-	},
-};
-
-static uint32_t magnetic_device_gpio_config[] = {
-	GPIO_CFG(MSM_GPIO_MSENSE_RST, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-};
-
-static int __init magnetic_device_init(void)
+#define AKM8975_GPIO_DRDY	180
+static int __init akm_init(void)
 {
-#if 1 // [HSS] case of using MSM_GPIO
-	config_gpio_table(magnetic_device_gpio_config,
-		ARRAY_SIZE(magnetic_device_gpio_config));
-#endif
+	int ret = 0;
+	struct regulator *akm_reg;
+
+	akm_reg = regulator_get(NULL, "gp4");
+	if (IS_ERR(akm_reg)) {
+		ret = PTR_ERR(akm_reg);
+		pr_err("%s: Failed to request regulator ret=%d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	ret = regulator_set_voltage(akm_reg, 2400000, 3600000);
+	if (ret) {
+		ret = PTR_ERR(akm_reg);
+		pr_err("%s: Failed to set regulator voltage ret=%d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	ret = regulator_enable(akm_reg);
+	if (ret) {
+		ret = PTR_ERR(akm_reg);
+		pr_err("%s: Failed to enable regulator ret=%d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	ret = gpio_request(AKM8975_GPIO_DRDY, "akm_drdy");
+	if (ret) {
+		pr_err("%s: Failed to request gpio ret=%d\n",
+			__func__, ret);
+		return ret;
+	}
+
 	return 0;
 }
+
+static struct akm8975_platform_data akm8975_pdata = {
+	.layout = 7,
+	.gpio_DRDY = AKM8975_GPIO_DRDY,
+	.gpio_RSTN = 0,
+};
 #endif
 
 #if defined(CONFIG_CHARGER_SMB328A)
@@ -3997,6 +4007,15 @@ static struct i2c_board_info msm_i2c_board_info[] = {
 		.irq		= MSM_GPIO_TO_INT(OPTNAV_IRQ),
 		.platform_data = &optnav_data,
 	},
+
+	#ifdef CONFIG_SENSORS_AK8975
+	{
+		I2C_BOARD_INFO(AKM_I2C_NAME, 0x18 >> 1),
+		.platform_data = &akm8975_pdata,
+		.irq = MSM_GPIO_TO_INT(AKM8975_GPIO_DRDY),
+	},
+	#endif
+
 };
 
 static struct i2c_board_info msm_marimba_board_info[] = {
@@ -5549,9 +5568,6 @@ static struct platform_device *devices[] __initdata = {
 #ifdef CONFIG_SENSORS_BMA023_ACCEL
 	&acc_i2c_gpio_device,
 #endif
-#ifdef CONFIG_SENSORS_AK8975
-	&mag_i2c_gpio_device,
-#endif
 /* 2011-01-27 hyeokseon.yu */
 #ifdef CONFIG_MAX17043_FUEL_GAUGE
 	&fuelgauge_i2c_gpio_device,
@@ -5765,6 +5781,11 @@ static struct msm_i2c_ssbi_platform_data msm_i2c_ssbi7_pdata = {
 static void __init msm7x30_init_irq(void)
 {
 	msm_init_irq();
+
+#ifdef CONFIG_SENSORS_AK8975
+	akm_init();
+#endif
+
 }
 
 #ifdef CONFIG_DEVICE_NAND
@@ -7251,14 +7272,6 @@ else
 			ARRAY_SIZE(touch_i2c_devices));
 #endif
 
-#ifdef CONFIG_SENSORS_AK8975
-	{
-		i2c_register_board_info(12, mag_i2c_devices,
-				ARRAY_SIZE(mag_i2c_devices));
-		pr_info("i2c_register_board_info 12 \n");
-	}
-#endif
-
 #ifdef CONFIG_SENSORS_BMA023_ACCEL
 	if(board_hw_revision >0)
 	{
@@ -7337,12 +7350,6 @@ else
 		i2c_register_board_info(0, cy8ctma300_board_info,
 			ARRAY_SIZE(cy8ctma300_board_info));
 	}
-
-#ifdef CONFIG_SENSORS_AK8975
-	{
-		magnetic_device_init();	// ak8975 nRST gpio pin configue
-	}
-#endif
 
 	if (machine_is_msm8x55_svlte_surf() || machine_is_msm8x55_svlte_ffa()) {
 		rc = gpio_tlmm_config(usb_hub_gpio_cfg_value, GPIO_CFG_ENABLE);
