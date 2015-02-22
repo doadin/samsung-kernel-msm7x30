@@ -9,12 +9,35 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include <linux/module.h>
-#include <mach/irqs.h>
+#include <asm/mach-types.h>
+#include <mach/gpio.h>
 #include <mach/gpiomux.h>
+#include <mach/socinfo.h>
+#include "devices.h"
+
+static struct gpiomux_setting akm_int_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIOMUX_IN,
+};
+
+static struct msm_gpiomux_config ancora_standard_configs[] __initdata = {
+	{
+		/* AKM_INT */
+		.gpio = 180,
+		.settings = {
+			[GPIOMUX_SUSPENDED]	= &akm_int_sus_cfg,
+		},
+	},
+};
+
 
 static int __init gpiomux_init(void)
 {
 	return msm_gpiomux_init(NR_GPIO_IRQS);
+
+	msm_gpiomux_install(ancora_standard_configs,
+			ARRAY_SIZE(u8800_standard_configs));
 }
 postcore_initcall(gpiomux_init);
