@@ -38,6 +38,6 @@ static int __init gpiomux_init(void)
 	return msm_gpiomux_init(NR_GPIO_IRQS);
 
 	msm_gpiomux_install(ancora_standard_configs,
-			ARRAY_SIZE(u8800_standard_configs));
+			ARRAY_SIZE(ancora_standard_configs));
 }
 postcore_initcall(gpiomux_init);
