@@ -110,7 +110,7 @@
 #include <linux/i2c/yda165.h>
 #endif
 #ifdef CONFIG_SENSORS_AK8975
-#include <linux/i2c/ak8975.h>
+#include <linux/akm8975.h>
 #endif
 #ifdef CONFIG_USB_SWITCH_FSA9480
 #include <linux/i2c/fsa9480.h>
