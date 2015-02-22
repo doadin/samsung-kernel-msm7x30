@@ -35,9 +35,15 @@ static struct msm_gpiomux_config ancora_standard_configs[] __initdata = {
 
 static int __init gpiomux_init(void)
 {
-	return msm_gpiomux_init(NR_GPIO_IRQS);
+	int rc = msm_gpiomux_init(NR_GPIO_IRQS);
+	if (rc) {
+		pr_err(KERN_ERR "msm_gpiomux_init failed %d\n", rc);
+		return rc;
+	}
 
 	msm_gpiomux_install(ancora_standard_configs,
 			ARRAY_SIZE(ancora_standard_configs));
+
+        return rc;
 }
 postcore_initcall(gpiomux_init);
