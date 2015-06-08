@@ -1164,17 +1164,7 @@ struct i2c_driver bma_acc_driver = {
 /* ---------------------------------------------------------------------------------------- *
    Module init and exit
  * ---------------------------------------------------------------------------------------- */
-static int __init bma_acc_init(void)
-{
-    return i2c_add_driver(&bma_acc_driver);
-}
-module_init(bma_acc_init);
-
-static void __exit bma_acc_exit(void)
-{
-    i2c_del_driver(&bma_acc_driver);
-}
-module_exit(bma_acc_exit);
+module_i2c_driver(bma_acc_driver);
 
 MODULE_DESCRIPTION("accelerometer kernel driver");
 MODULE_LICENSE("GPL");
